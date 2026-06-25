@@ -1,0 +1,30 @@
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        maven("https://repo1.maven.org/maven2")
+        maven("https://jitpack.io")
+        maven("https://api.xposed.info/") {
+            content {
+                includeGroup("de.robv.android.xposed")
+            }
+        }
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = "QFun"
+include(
+    ":app",
+    ":annotation",
+    ":processor",
+    ":qqinterface"
+)

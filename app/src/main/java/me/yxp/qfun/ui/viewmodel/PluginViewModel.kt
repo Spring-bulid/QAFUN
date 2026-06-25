@@ -1,0 +1,357 @@
+package me.yxp.qfun.ui.viewmodel
+
+import android.content.Context
+import android.net.Uri
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
+import me.yxp.qfun.plugin.loader.PluginManager
+import me.yxp.qfun.plugin.net.ScriptInfo
+import me.yxp.qfun.plugin.net.ScriptService
+import me.yxp.qfun.ui.pages.plugin.LocalPluginData
+import me.yxp.qfun.ui.pages.plugin.OnlinePluginData
+import me.yxp.qfun.utils.io.FileUtils
+import me.yxp.qfun.utils.qq.QQCurrentEnv
+import me.yxp.qfun.utils.qq.Toasts
+import java.io.File
+
+sealed interface PluginListUiState {
+    data object Loading : PluginListUiState
+    data class Success(val data: List<OnlinePluginData>) : PluginListUiState
+    data class Error(val message: String) : PluginListUiState
+}
+
+class PluginViewModel : ViewModel() {
+
+    var localPlugins by mutableStateOf<List<LocalPluginData>>(emptyList())
+        private set
+
+    var onlineUiState by mutableStateOf<PluginListUiState>(PluginListUiState.Loading)
+        private set
+
+    var downloadingPlugins by mutableStateOf<Set<String>>(emptySet())
+        private set
+
+    var showDeleteDialog by mutableStateOf(false)
+        private set
+
+    var showUploadDialog by mutableStateOf(false)
+        private set
+
+    var pendingDeletePluginId by mutableStateOf<String?>(null)
+        private set
+
+    var pendingUploadPluginId by mutableStateOf<String?>(null)
+        private set
+
+    var showCreateDialog by mutableStateOf(false)
+        private set
+
+    var showSuccessDialog by mutableStateOf(false)
+        private set
+
+    var createdPluginPath by mutableStateOf("")
+        private set
+
+    var isLocalRefreshing by mutableStateOf(false)
+        private set
+
+    var isOnlineRefreshing by mutableStateOf(false)
+        private set
+
+
+    var isSearchActive by mutableStateOf(false)
+
+    var searchQuery by mutableStateOf("")
+
+    val filteredLocalPlugins by derivedStateOf {
+        if (searchQuery.isEmpty()) {
+            localPlugins
+        } else {
+            localPlugins.filter { 
+                it.name.contains(searchQuery, ignoreCase = true) || 
+                        it.author.contains(searchQuery, ignoreCase = true) ||
+                        it.description.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
+
+    val filteredOnlineUiState by derivedStateOf {
+        val currentState = onlineUiState
+        if (searchQuery.isEmpty() || currentState !is PluginListUiState.Success) {
+            currentState
+        } else {
+            val filteredList = currentState.data.filter {
+                it.name.contains(searchQuery, ignoreCase = true) ||
+                        it.author.contains(searchQuery, ignoreCase = true) ||
+                        it.description.contains(searchQuery, ignoreCase = true)
+            }
+            PluginListUiState.Success(filteredList)
+        }
+    }
+
+    private val scriptList = mutableListOf<ScriptInfo>()
+
+    init {
+        PluginManager.loadAll()
+        refreshLocalPlugins()
+        fetchOnlinePlugins()
+    }
+
+    fun reloadLocalPlugins() {
+        if (isLocalRefreshing) return
+        isLocalRefreshing = true
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            val startTime = System.currentTimeMillis()
+            PluginManager.loadAll()
+            val diff = System.currentTimeMillis() - startTime
+            if (diff < 500L) delay(500L - diff)
+            refreshLocalPlugins()
+            isLocalRefreshing = false
+            Toasts.qqToast(2, "刷新成功")
+        }
+    }
+
+    fun reloadOnlinePlugins() {
+        if (isOnlineRefreshing) return
+        isOnlineRefreshing = true
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            val startTime = System.currentTimeMillis()
+            try {
+                withTimeout(10_000L) {
+                    ScriptService.fetchScriptList().fold(
+                        onSuccess = { list ->
+                            scriptList.clear()
+                            scriptList.addAll(list)
+                            onlineUiState = PluginListUiState.Success(list.map { script ->
+                                OnlinePluginData(
+                                    script.id,
+                                    script.name,
+                                    script.version,
+                                    script.author,
+                                    script.description,
+                                    script.downloads,
+                                    script.uploadTime
+                                )
+                            })
+                            Toasts.qqToast(2, "刷新成功")
+                        },
+                        onFailure = { e ->
+                            Toasts.qqToast(1, e.message ?: "刷新失败")
+                        }
+                    )
+                }
+            } catch (_: TimeoutCancellationException) {
+                Toasts.qqToast(1, "请求超时")
+            } finally {
+                val diff = System.currentTimeMillis() - startTime
+                if (diff < 500L) delay(500L - diff)
+                isOnlineRefreshing = false
+            }
+        }
+    }
+
+    fun refreshLocalPlugins() {
+        localPlugins = PluginManager.plugins.map { plugin ->
+            LocalPluginData(
+                plugin.id,
+                plugin.name,
+                plugin.version,
+                plugin.author,
+                plugin.desc,
+                plugin.isRunning,
+                PluginManager.autoLoadList.contains(plugin.id)
+            )
+        }
+    }
+
+    fun showCreatePluginDialog() {
+        showCreateDialog = true
+    }
+
+    fun dismissCreatePluginDialog() {
+        showCreateDialog = false
+    }
+
+    fun dismissSuccessDialog() {
+        showSuccessDialog = false
+    }
+
+    fun createPlugin(id: String, name: String, version: String, author: String) {
+        val file = PluginManager.createPlugin(id, name, version, author)
+        if (file != null) {
+            createdPluginPath = file.absolutePath
+            refreshLocalPlugins()
+            showCreateDialog = false
+            showSuccessDialog = true
+        } else {
+            Toasts.qqToast(1, "创建失败: ID重复或文件夹(脚本名)已存在")
+        }
+    }
+
+    fun togglePluginRun(id: String, run: Boolean) {
+        val plugin = PluginManager.plugins.find { it.id == id } ?: return
+        if (run) {
+            if (PluginManager.startPlugin(plugin)) refreshLocalPlugins()
+        } else {
+            PluginManager.stopPlugin(plugin)
+            refreshLocalPlugins()
+        }
+    }
+
+    fun togglePluginAutoLoad(id: String, autoLoad: Boolean) {
+        val plugin = PluginManager.plugins.find { it.id == id } ?: return
+        PluginManager.setAutoLoad(plugin, autoLoad)
+        refreshLocalPlugins()
+    }
+
+    fun reloadPlugin(id: String) {
+        val plugin = PluginManager.plugins.find { it.id == id } ?: return
+        if (PluginManager.reloadPlugin(plugin)) {
+            refreshLocalPlugins()
+            Toasts.qqToast(2, "重载成功")
+        }
+    }
+
+    fun showDeleteConfirm(id: String) {
+        pendingDeletePluginId = id
+        showDeleteDialog = true
+    }
+
+    fun dismissDeleteDialog() {
+        showDeleteDialog = false
+        pendingDeletePluginId = null
+    }
+
+    fun confirmDelete() {
+        pendingDeletePluginId?.let { id ->
+            PluginManager.plugins.find { it.id == id }?.let { plugin ->
+                PluginManager.deletePlugin(plugin)
+                refreshLocalPlugins()
+            }
+        }
+        dismissDeleteDialog()
+    }
+
+    fun showUploadConfirm(id: String) {
+        pendingUploadPluginId = id
+        showUploadDialog = true
+    }
+
+    fun dismissUploadDialog() {
+        showUploadDialog = false
+        pendingUploadPluginId = null
+    }
+
+    fun confirmUpload() {
+        val id = pendingUploadPluginId ?: return
+        dismissUploadDialog()
+        uploadPlugin(id)
+    }
+
+    private fun uploadPlugin(id: String) {
+        val plugin = PluginManager.plugins.find { it.id == id } ?: return
+        val scriptZip = File(QQCurrentEnv.currentDir + "cache", "${plugin.name}.zip")
+        
+        if (!FileUtils.zip(File(plugin.dirPath), scriptZip)) {
+            Toasts.qqToast(1, "打包失败")
+            return
+        }
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = ScriptService.uploadScript(
+                plugin.id,
+                plugin.author,
+                plugin.desc,
+                plugin.version,
+                plugin.name,
+                scriptZip
+            )
+            FileUtils.delete(scriptZip)
+            result.fold(
+                onSuccess = { Toasts.qqToast(2, "上传成功: ${it.status}") },
+                onFailure = { Toasts.qqToast(1, it.message ?: "上传失败") }
+            )
+        }
+    }
+
+    private fun fetchOnlinePlugins() {
+        if (onlineUiState is PluginListUiState.Loading && scriptList.isNotEmpty()) return
+        onlineUiState = PluginListUiState.Loading
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            ScriptService.fetchScriptList().fold(
+                onSuccess = { list ->
+                    scriptList.clear()
+                    scriptList.addAll(list)
+                    onlineUiState = PluginListUiState.Success(list.map { script ->
+                        OnlinePluginData(
+                            script.id,
+                            script.name,
+                            script.version,
+                            script.author,
+                            script.description,
+                            script.downloads,
+                            script.uploadTime
+                        )
+                    })
+                },
+                onFailure = { e ->
+                    val errorMessage = e.message ?: "获取失败"
+                    onlineUiState = PluginListUiState.Error(errorMessage)
+                    Toasts.qqToast(1, errorMessage)
+                }
+            )
+        }
+    }
+
+    fun downloadPlugin(id: String) {
+        val script = scriptList.find { it.id == id } ?: return
+        if (downloadingPlugins.contains(id)) return
+        
+        downloadingPlugins = downloadingPlugins + id
+        Toasts.qqToast(0, "开始下载: ${script.name}")
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            ScriptService.downloadAndInstall(script).fold(
+                onSuccess = {
+                    downloadingPlugins = downloadingPlugins - id
+                    Toasts.qqToast(2, "安装成功")
+                    refreshLocalPlugins()
+                },
+                onFailure = { e ->
+                    downloadingPlugins = downloadingPlugins - id
+                    Toasts.qqToast(1, e.message ?: "安装失败")
+                }
+            )
+        }
+    }
+
+    fun handleIconSelection(context: Context, uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val targetFile = File("${QQCurrentEnv.currentDir}data/plugin")
+                FileUtils.ensureFile(targetFile)
+                inputStream?.use { input ->
+                    targetFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                Toasts.qqToast(2, "悬浮图标已更新，下次显示生效")
+            }.onFailure {
+                Toasts.qqToast(1, "图标设置失败: ${it.message}")
+            }
+        }
+    }
+}
