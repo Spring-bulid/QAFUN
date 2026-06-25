@@ -1,4 +1,5 @@
 {
+  "2.7.3": "修复逆向查号群聊成员 QQ 号反查失败：v2.7.2 的 FriendTool.getUinFromUid 走关系链缓存，对群聊非好友成员查不到；改用 ITroopMemberListRepoApi.fetchTroopMemberUin（群成员缓存）+ 协程异步查询，弹窗先显示「查询中」再刷新结果",
   "2.7.2": "修复逆向查号取不到 QQ 号：NTQQ 新版 senderUin 经常为 0，改用 senderUid 经 FriendTool.getUinFromUid 反查真实 QQ 号（含 5 次重试）；同步修复 FriendTool.getUidFromUin 调错方法的 BUG",
   "2.7.1": "紧急修复逆向查号点击无反应（QFunBottomDialog 创建后未调用 .show()）",
   "2.7": "新增逆向查号：长按任意消息即可逆向出对方 QQ 号、NT UID、昵称及所在群聊信息（群名/群号/群主），支持复制 QQ 号与查看资料卡",

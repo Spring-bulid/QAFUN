@@ -1,6 +1,6 @@
 {
-  "latest_version": "2.7.2",
+  "latest_version": "2.7.3",
   "release_date": "2026-06-25",
-  "release_notes": "修复逆向查号取不到 QQ 号：NTQQ 新版 senderUin 经常为 0，改用 senderUid 反查真实 QQ 号；修复 FriendTool.getUidFromUin 调错方法的 BUG",
+  "release_notes": "修复逆向查号群聊成员 QQ 号反查失败：改用群成员缓存接口（fetchTroopMemberUin）+ 协程异步查询，弹窗先显示「查询中」再刷新结果",
   "download_url": "https://github.com/Spring-bulid/QAFUN/releases/latest"
 }
