@@ -24,7 +24,7 @@ import java.lang.reflect.Method
 
 @HookItemAnnotation(
     "拍一拍连拍",
-    "双击头像后可输入次数(单日上限200)",
+    "双击头像后可输入次数(配合「无限制拍一拍」可突破200次)",
     HookCategory.SOCIAL
 )
 object MultiPaiYiPai : BaseSwitchHookItem() {
@@ -81,13 +81,13 @@ object MultiPaiYiPai : BaseSwitchHookItem() {
                         val num = filtered.toIntOrNull() ?: 0
                         count = when {
                             filtered.isEmpty() -> ""
-                            num > 200 -> "200"
+                            num > 9999 -> "9999"
                             num < 1 && filtered.isNotEmpty() -> "1"
                             else -> filtered
                         }
                     },
                     label = "拍一拍次数",
-                    hint = "1-200",
+                    hint = "1-9999",
                     modifier = Modifier,
                     keyboardType = KeyboardType.Number
                 )

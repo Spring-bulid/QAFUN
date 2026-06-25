@@ -1,6 +1,6 @@
 {
-  "latest_version": "2.7.4",
+  "latest_version": "2.8",
   "release_date": "2026-06-25",
-  "release_notes": "修复私聊场景逆向查号取不到 QQ 号：私聊里 peerUin 就是对方 QQ 号，senderUin 为 0 时直接用 peerUin，无需反查 uid",
+  "release_notes": "新增「无限制拍一拍」：屏蔽 QQ 服务端返回的「休息一下/操作频繁」等限流提示；拍一拍连拍上限从 200 提升到 9999",
   "download_url": "https://github.com/Spring-bulid/QAFUN/releases/latest"
 }
