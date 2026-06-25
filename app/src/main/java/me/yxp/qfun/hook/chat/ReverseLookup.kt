@@ -112,7 +112,7 @@ object ReverseLookup : BaseSwitchHookItem(), MenuClickListener {
                 msgRecord = record,
                 onDismiss = dismiss
             )
-        }
+        }.show()
     }
 }
 

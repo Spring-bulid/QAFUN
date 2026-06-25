@@ -1,6 +1,6 @@
 {
-  "latest_version": "2.7",
+  "latest_version": "2.7.1",
   "release_date": "2026-06-25",
-  "release_notes": "新增逆向查号：长按任意消息即可逆向出对方 QQ 号、NT UID、昵称及所在群聊信息（群名/群号/群主），支持复制 QQ 号与查看资料卡",
+  "release_notes": "紧急修复逆向查号点击无反应（QFunBottomDialog 未调用 show）；长按消息即可弹出对方 QQ 号/NT UID/昵称及群聊信息",
   "download_url": "https://github.com/Spring-bulid/QAFUN/releases/latest"
 }
