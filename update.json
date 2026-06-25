@@ -1,6 +1,6 @@
 {
-  "latest_version": "2.7.3",
+  "latest_version": "2.7.4",
   "release_date": "2026-06-25",
-  "release_notes": "修复逆向查号群聊成员 QQ 号反查失败：改用群成员缓存接口（fetchTroopMemberUin）+ 协程异步查询，弹窗先显示「查询中」再刷新结果",
+  "release_notes": "修复私聊场景逆向查号取不到 QQ 号：私聊里 peerUin 就是对方 QQ 号，senderUin 为 0 时直接用 peerUin，无需反查 uid",
   "download_url": "https://github.com/Spring-bulid/QAFUN/releases/latest"
 }

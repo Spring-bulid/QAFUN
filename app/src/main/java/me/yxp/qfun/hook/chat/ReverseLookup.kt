@@ -189,13 +189,18 @@ private fun ReverseLookupContent(
     val isGroup = chatType == 2
 
     // QQ 号查询状态：null=查询中，""=失败，其它=成功
+    // 私聊场景 peerUin 就是对方 QQ 号（可靠值），senderUin=0 时直接用，无需反查
     var resolvedUin by remember {
         mutableStateOf(
-            if (rawSenderUin.isNotEmpty() && rawSenderUin != "0") rawSenderUin else null
+            when {
+                rawSenderUin.isNotEmpty() && rawSenderUin != "0" -> rawSenderUin
+                chatType == 1 -> peerUin                  // 私聊：peerUin 即对方 QQ
+                else -> null                              // 群聊：需异步反查
+            }
         )
     }
 
-    // 原始 senderUin 有效就直接用；否则启动协程异步反查
+    // 群聊且 senderUin=0 时，启动协程异步反查（私聊已在上面用 peerUin 兜底）
     LaunchedEffect(senderUid, chatType) {
         if (resolvedUin == null) {
             val uin = resolveUinFromUid(senderUid, chatType)
