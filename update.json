@@ -1,6 +1,6 @@
 {
-  "latest_version": "2.7.1",
+  "latest_version": "2.7.2",
   "release_date": "2026-06-25",
-  "release_notes": "紧急修复逆向查号点击无反应（QFunBottomDialog 未调用 show）；长按消息即可弹出对方 QQ 号/NT UID/昵称及群聊信息",
+  "release_notes": "修复逆向查号取不到 QQ 号：NTQQ 新版 senderUin 经常为 0，改用 senderUid 反查真实 QQ 号；修复 FriendTool.getUidFromUin 调错方法的 BUG",
   "download_url": "https://github.com/Spring-bulid/QAFUN/releases/latest"
 }

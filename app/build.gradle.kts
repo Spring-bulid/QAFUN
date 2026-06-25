@@ -24,8 +24,8 @@ extensions.configure<ApplicationExtension> {
         applicationId = "me.yxp.qfun"
         minSdk = 26
         targetSdk = 37
-        versionCode = 28
-        versionName = "2.7.1"
+        versionCode = 29
+        versionName = "2.7.2"
 
         ndk {
             abiFilters.add("arm64-v8a")

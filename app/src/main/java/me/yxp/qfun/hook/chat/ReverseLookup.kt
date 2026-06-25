@@ -36,6 +36,7 @@ import me.yxp.qfun.hook.base.BaseSwitchHookItem
 import me.yxp.qfun.plugin.bean.MsgData
 import me.yxp.qfun.ui.core.compatibility.QFunBottomDialog
 import me.yxp.qfun.utils.log.LogUtils
+import me.yxp.qfun.utils.qq.FriendTool
 import me.yxp.qfun.utils.qq.QQCurrentEnv
 import me.yxp.qfun.utils.qq.TroopTool
 import me.yxp.qfun.utils.qq.api
@@ -78,13 +79,20 @@ object ReverseLookup : BaseSwitchHookItem(), MenuClickListener {
 
     private fun showReverseLookupSheet(activity: Activity, msgData: MsgData) {
         val record: MsgRecord = msgData.data
-        val senderUin = msgData.userUin
-        val senderUid = msgData.userUid
         val chatType = msgData.type                  // 1=私聊 2=群聊
         val peerUin = msgData.peerUin                // 群号 / 对方 QQ
+        val senderUid = msgData.userUid
         val nick = record.sendMemberName.ifEmpty { record.sendNickName }
         val msgTime = record.msgTime
         val msgId = record.msgId
+
+        // NTQQ 新版 senderUin 经常返回 0（改用 senderUid 即 u_xxx 标识用户），
+        // 此时需要通过 FriendTool.getUinFromUid 反查真实 QQ 号。
+        // 该接口有时首次返回空（缓存未就绪），做最多 5 次重试。
+        var senderUin = msgData.userUin
+        if (senderUin.isEmpty() || senderUin == "0") {
+            senderUin = resolveUinFromUid(senderUid)
+        }
 
         // 群聊：查群信息（群名、群主）；私聊：跳过
         var groupName = ""
@@ -113,6 +121,22 @@ object ReverseLookup : BaseSwitchHookItem(), MenuClickListener {
                 onDismiss = dismiss
             )
         }.show()
+    }
+
+    /**
+     * 通过 NT uid（u_xxx）反查 QQ 号。
+     * IRelationNTUinAndUidApi.getUinFromUid 有时首次返回空（缓存未就绪），做 5 次重试。
+     */
+    private fun resolveUinFromUid(uid: String): String {
+        if (uid.isEmpty() || !uid.startsWith("u_")) return ""
+        repeat(5) {
+            runCatching {
+                val uin = FriendTool.getUinFromUid(uid)
+                if (uin.isNotEmpty() && uin != "0") return uin
+            }.onFailure { LogUtils.e(TAG, it) }
+            Thread.sleep(80)
+        }
+        return ""
     }
 }
 
@@ -156,8 +180,18 @@ private fun ReverseLookupContent(
 
         // 发送者信息卡
         InfoCard(title = "发送者") {
-            InfoRow(label = "QQ 号", value = senderUin, copyable = true, activity = activity)
-            InfoRow(label = "NT UID", value = senderUid, copyable = true, activity = activity)
+            val uinDisplay = when {
+                senderUin.isEmpty() -> "(反查失败，请看 NT UID)"
+                senderUin == "0" -> "(原始值为 0，请看 NT UID)"
+                else -> senderUin
+            }
+            InfoRow(
+                label = "QQ 号",
+                value = uinDisplay,
+                copyable = senderUin.isNotEmpty() && senderUin != "0",
+                activity = activity
+            )
+            InfoRow(label = "NT UID", value = senderUid.ifEmpty { "(空)" }, copyable = senderUid.isNotEmpty(), activity = activity)
             InfoRow(label = "昵称/群名片", value = senderNick.ifEmpty { "(空)" })
         }
 
@@ -184,22 +218,24 @@ private fun ReverseLookupContent(
         Spacer(modifier = Modifier.height(4.dp))
 
         // 操作按钮
+        val uinValid = senderUin.isNotEmpty() && senderUin != "0"
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             OutlinedButton(
                 onClick = {
-                    copyToClipboard(activity, senderUin)
+                    if (uinValid) copyToClipboard(activity, senderUin)
+                    else copyToClipboard(activity, senderUid)
                 },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp)
-            ) { Text("复制 QQ 号") }
+            ) { Text(if (uinValid) "复制 QQ 号" else "复制 NT UID") }
 
             Button(
                 onClick = {
                     onDismiss()
-                    openProfileCard(activity, msgRecord)
+                    openProfileCard(activity, msgRecord, senderUin, senderUid)
                 },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
@@ -274,10 +310,22 @@ private fun copyToClipboard(context: Context, text: String) {
     }
 }
 
-private fun openProfileCard(activity: Activity, msgRecord: MsgRecord) {
+private fun openProfileCard(activity: Activity, msgRecord: MsgRecord, senderUin: String, senderUid: String) {
     runCatching {
-        // 通过 AIOMsgItem 包装 MsgRecord 打开资料卡（与 ShowAtTarget 同款方式）
-        api<IContactApi>().openProfileCard(activity, AIOMsgItem(msgRecord))
+        // NTQQ 新版 msgRecord.senderUin 可能为 0，资料卡会打不开。
+        // 这里用反查到的真实 QQ 号重建 MsgRecord，确保资料卡能定位到目标用户。
+        val effectiveUin = senderUin.toLongOrNull() ?: 0L
+        val recordForCard = if (effectiveUin != 0L && msgRecord.senderUin == 0L) {
+            MsgRecord().apply {
+                this.senderUin = effectiveUin
+                this.senderUid = senderUid
+                this.peerUin = msgRecord.peerUin
+                this.chatType = msgRecord.chatType
+            }
+        } else {
+            msgRecord
+        }
+        api<IContactApi>().openProfileCard(activity, AIOMsgItem(recordForCard))
     }.onFailure {
         LogUtils.e("ReverseLookup", it)
         me.yxp.qfun.utils.qq.Toasts.qqToast(1, "打开资料卡失败")

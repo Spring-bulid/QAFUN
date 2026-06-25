@@ -39,7 +39,7 @@ object FriendTool {
     }
 
     fun getUidFromUin(uin: String): String {
-        return api<IRelationNTUinAndUidApi>().getUinFromUid(uin)
+        return api<IRelationNTUinAndUidApi>().getUidFromUin(uin)
     }
 
     fun getUinFromUid(uid: String): String {
