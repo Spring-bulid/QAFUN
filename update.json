@@ -1,6 +1,6 @@
 {
-  "latest_version": "2.6",
+  "latest_version": "2.7",
   "release_date": "2026-06-25",
-  "release_notes": "重命名 JavaPlugin 为 QAFUN；插件服务器迁移到 GitHub（列表/上传/更新检查均走 GitHub raw + Issue）",
+  "release_notes": "新增逆向查号：长按任意消息即可逆向出对方 QQ 号、NT UID、昵称及所在群聊信息（群名/群号/群主），支持复制 QQ 号与查看资料卡",
   "download_url": "https://github.com/Spring-bulid/QAFUN/releases/latest"
 }
