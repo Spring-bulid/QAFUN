@@ -1,22 +1,61 @@
 <div align="center">
-    <h1>QFun</h1>
+    <h1>QAFUN</h1>
 
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.3.0-7F52FF?style=flat-square&logo=kotlin&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=flat-square&logo=android&logoColor=white)
+![TypeScript](https://img.shields.io/badge/Plugin-TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![QuickJS](https://img.shields.io/badge/Engine-QuickJS--kt-00D9C0?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?style=flat-square&logo=android&logoColor=white)
-![GitHub Stars](https://img.shields.io/github/stars/oneQAQone/QFun?style=social)
 
 </div>
 
 # 简介
 
-一款基于 Xposed 框架开发的 QQ/TIM 功能增强模块。
-本项目采用了 **Kotlin** + **Jetpack Compose** 的现代 Android 技术栈构建。
+**QAFUN** 是一款基于 Xposed 框架开发的 QQ/TIM 功能增强模块。
+在 QFun 原项目基础上进行了深度重构，采用 **Kotlin + Jetpack Compose** 现代技术栈，并将第三方插件引擎从 BeanShell 完全重写为 **TypeScript (QuickJS-kt)**，新增自定义桌面壁纸、防检测等特性。
 
-# 功能列表
+主题色：**紫色 #7C5CFF + 青色 #00D9C0** 渐变。
 
-### 模块功能
-仅列举部分代表性功能，更多实用功能请在模块内探索：
+# 核心特性
+
+## 🆕 本次新增（相比 QFun 原版）
+
+### 1. TypeScript 插件引擎（完全重写）
+- 用 **QuickJS-kt** (`io.github.dokar3:quickjs-kt-android:1.0.5`) 替换 BeanShell 解释器
+- 自研 **TsTranspiler**：轻量级 char 状态机，将 TypeScript 转译为 JS（剥离类型注解、interface、enum、访问修饰符、as/satisfies/! 断言）
+- `PluginCompiler` / `PluginBridge` / `PluginCallback` 全部重写
+- **60+ 绑定 API**：`log`、`toast`、`sendMsg`、`sendPic`、`sendPtt`、`getGroupList`、`renderTextImage`、`setTimeout`、`console` 等
+- 事件监听：收发消息、群成员变动、拍一拍、聊天界面切换、菜单项点击
+- 真实异步定时器（`ScheduledExecutorService` 回调进 QuickJS）
+- Mutex 序列化执行，线程安全
+
+### 2. 图片外显插件（TS 示例）
+- 6 套渐变预设（紫梦/海洋/日落/森林/暗夜/烈焰）
+- 触发词模式 + 自动模式
+- 文字渲染为精美渐变图片发送
+- 宿主端 Canvas 渲染（TS 沙箱无法绘图）
+
+### 3. 群聊统计仪表盘（TS 示例）
+- 每成员消息数统计
+- 24 小时热力图
+- TOP5 排行榜（渲染为图片发送）
+- JSON 持久化存储
+
+### 4. 自定义桌面壁纸
+- 为 QQ 所有界面注入自定义壁纸背景
+- Hook `Activity.onPostResume`，在 `android.R.id.content` index 0 插入 ImageView 壁纸层
+- 清除 Window/content/Fragment 根的不透明背景让壁纸透出
+- 分离式盒模糊（滑动窗口 O(w*h)）
+- 暗化遮罩、透明度、3 种缩放方式（裁剪填充/适应/拉伸）
+- 实时预览配置页
+
+### 5. 防检测（防踢号）
+- `PackageManager.getInstalledPackages` / `getInstalledApplications` 列表过滤（隐藏模块自身 + Xposed/LSPosed/Magisk 等 15+ 关键词包名）
+- `Debug.isDebuggerConnected` → false
+- 全进程加载（`process="All"`），默认开启
+- **安全策略**：仅低风险 hook，不拦截 File/Runtime/SystemProperties，不影响 QQ 稳定性
+
+## 📦 模块内置功能（继承自 QFun）
 - [x] 群打卡
 - [x] 防撤回 (带提示)
 - [x] 自动续火
@@ -33,82 +72,93 @@
 - [x] 移除表情回应
 - [x] 解除风险网页拦截
 
-> 💡 如有其他功能需求欢迎提交反馈，具备可行性的功能将被加入开发计划。
-
-### 脚本扩展与编写
-模块内置基于 **BeanShell** 的脚本引擎，支持使用 **Java 语法** 编写脚本以动态扩展功能，可自行编写或从在线脚本库下载。
-
-*   **事件驱动**：实时监听消息收发、群成员变动及社交交互等事件，用于触发自动化逻辑。
-*   **QQ接口**：封装基于NT架构的 QQ 操作 API 及数据获取接口，提供便捷的底层调用能力。
-*   **交互集成**：支持在消息长按菜单及脚本悬浮窗中注册自定义功能入口，增强交互体验。
-*   **动态加载**：提供运行时加载外部类库或 Java 源码的能力，实现灵活的功能热插拔。
-
 # 技术栈
 
 ### 💻 核心语言与架构
-*   **Kotlin**: 项目逻辑与 UI 代码主要采用 Kotlin 编写。充分利用 **Coroutines**（协程）处理复杂的异步任务（如网络请求、IO 操作），确保主线程流畅不卡顿。
-*   **MVVM**: 采用 Model-View-ViewModel 架构设计，实现 UI 状态与业务逻辑的解耦。
+- **Kotlin**：项目逻辑与 UI 代码，Coroutines 处理异步
+- **MVVM**：Model-View-ViewModel 架构
 
 ### 🎨 界面与交互
-*   **Jetpack Compose (Material3)**: 摒弃传统 XML，基于 Google 最新设计规范构建的全声明式 UI，提供沉浸式视觉体验与动态主题适配。
+- **Jetpack Compose (Material3)**：全声明式 UI，QAFUN 紫青渐变主题
 
 ### 🛠 逆向与 Hook
-*   **DexKit**: 集成高效的 C++ 运行时字节码分析库，通过特征匹配而非硬编码查找 Hook 点，极大提升了模块在宿主更新后的存活率（抗混淆）。
-*   **Xposed API**: 采用 LibXposed 标准接口并兼容 Legacy Xposed，确保跨框架的稳定性与高性能。
+- **DexKit**：C++ 运行时字节码分析，抗混淆
+- **Xposed API**：LibXposed 标准接口 + 兼容 Legacy Xposed
 
 ### 📦 数据与构建
-*   **Kotlin Serialization**: 官方高性能序列化库，处理配置文件与网络数据的 JSON 读写，确保类型安全。
-*   **KSP**: 使用 Kotlin Symbol Processing 在编译时自动扫描注解并生成 Hook 注册表，实现模块功能的解耦与自动装载。
+- **Kotlin Serialization**：JSON 序列化
+- **KSP**：编译时注解扫描，自动生成 Hook 注册表
 
 ### 🔌 动态扩展
-*   **BeanShell**: 内置轻量级 Java 脚本解释器，支持用户编写脚本动态调用模块 API，实现功能的热插拔与扩展。
+- **QuickJS-kt + TypeScript**：替换 BeanShell，支持 TS 插件开发
+- **TsTranspiler**：自研轻量 TS→JS 转译器
 
 # 适配与运行环境
 
 ### Android 系统
-*   **最低版本**: Android 8.0 (API Level 26)
-*   **推荐版本**: Android 11.0+ (以获得最佳的 UI 适配体验)
-*   **架构支持**: `arm64-v8a` (主流), `armeabi-v7a`。**暂不支持 x86 环境**（部分模拟器无法使用）。
+- **最低版本**: Android 8.0 (API Level 26)
+- **推荐版本**: Android 11.0+
+- **架构支持**: `arm64-v8a`, `armeabi-v7a`
 
 ### 宿主应用
 | 应用 | 推荐版本 | 备注 |
 | :--- | :--- | :--- |
-| **QQ** | `v9.1.25` 及以上 | 其他基于 NT 架构的版本兼容性需自行测试 |
-| **TIM** | `v4.0.95` 及以上 | 针对旧版架构做了部分兼容 |
-> ⚠️ 新增功能主要基于最新版 QQ 开发，旧版本可能存在兼容性问题。
+| **QQ** | `v9.1.25` 及以上 | 基于 NT 架构 |
+| **TIM** | `v4.0.95` 及以上 | 部分兼容 |
 
 ### 框架支持
 
 | 环境类型 | 推荐方案 | 说明 |
 | :--- | :--- | :--- |
-| **✅ Root 环境** | **LSPosed (Zygisk/Riru)** | **强烈推荐**。支持 Scope 作用域模式，性能损耗最小，Hook 稳定性最高。 |
-| **🛡️ 免 Root 环境** | **LSPatch 及主流免 Root 框架** | **推荐**。通过修补 APK 的方式集成 Xposed 环境，适合无法解锁 Bootloader 的设备。 |
-| *其他环境* | *EdXposed / 太极 / VMOS* | *理论支持*，但属于旧一代技术或容器环境，可能存在兼容性问题，未做全面测试。 |
+| **✅ Root 环境** | **LSPosed (Zygisk/Riru)** | **强烈推荐** |
+| **🛡️ 免 Root 环境** | **LSPatch** | 修补 APK 集成 Xposed |
+
+# TypeScript 插件开发
+
+插件位于 QQ 私有目录 `QFun/plugins/[插件名]/main.ts`，示例：
+
+```typescript
+// main.ts
+interface MsgData {
+    msg: string;
+    senderUin: number;
+    // ...
+}
+
+function onLoad() {
+    log("插件已加载");
+    addItem("测试按钮", "onTestClick");
+    addMenuItem("群菜单项", "onMenuClick", []);
+}
+
+function onTestClick() {
+    toast("Hello from TS plugin!");
+}
+
+function onMsg(data: MsgData) {
+    log("收到消息: " + data.msg);
+}
+
+function unLoadPlugin() {
+    log("插件已卸载");
+}
+```
+
+支持完整 TS 类型注解，由 TsTranspiler 自动转译为 JS 在 QuickJS 中运行。
 
 # 反馈与日志
 
-为了高效定位问题，反馈时**请务必注明**以下信息：
-1.  **宿主版本**
-2.  **模块版本**
-3.  **运行框架及版本**
+反馈时请注明：宿主版本、模块版本、运行框架及版本。
 
-> **💡 提示**：`Android/data/[宿主包名]/QFun/global/log/` 目录下的 **environment_info.txt** 已自动记录了完整的运行环境信息，建议在反馈时一同提交。
-> 您也可以直接打包并反馈 **LSPosed 框架日志**（建议开启详细日志）。
+日志位置：`Android/data/[宿主包名]/QFun/[当前QQ号]/log/`
 
-### 1. 常规错误
-> 指功能异常、脚本报错等未导致应用闪退的情况。
-*   **文件**: `error_log.txt`
-*   **位置**: `Android/data/[宿主包名]/QFun/[当前QQ号]/log/`
+# 免责声明
 
-### 2. 应用崩溃
-> 指应用直接停止运行、闪退的情况。
-*   **文件**: `crash_[时间戳].zip`
-*   **位置**: `Android/data/[宿主包名]/QFun/[当前QQ号]/crash/`
-    *   *(注：若未登录即闪退，请检查 `.../QFun/global/crash/` 目录)*
-*   **提示**: 闪退弹窗中**点击路径文字**即可直接复制完整路径。
+1. **仅供学习交流**：本项目仅为 Android 开发与逆向工程技术的学习、交流与研究。
+2. **风险自担**：使用本模块可能违反 QQ/TIM 用户协议，存在账号风险。**开发者不对任何后果负责。**
+3. **非商业用途**：完全免费开源，禁止商业或非法用途。
 
-### ⚠️ 关于路径
-请在设备的**内部存储**（若是应用分身/多开，则在对应的**分身存储**）中查找上述路径。
+**下载、安装或使用本模块即代表同意上述免责声明。**
 
 <br/>
 
@@ -116,34 +166,23 @@
 
 ### 致谢
 
-本项目借鉴了一些开源项目，特别感谢以下开源项目提供的底层支持、架构参考及代码灵感：
+本项目基于 [QFun](https://github.com/oneQAQone/QFun) 深度重构，感谢原项目及以下开源项目：
 
-| Open Source Project | Role & Description |
+| Open Source Project | Role |
 | :--- | :--- |
-| [![LSPosed](https://img.shields.io/badge/LSPosed-Framework-blue?style=flat-square&logo=android)](https://github.com/LSPosed/LSPosed) | **现代化的 Xposed 框架**<br>提供了稳定、高效且支持作用域的运行环境。 |
-| [![DexKit](https://img.shields.io/badge/DexKit-Analysis-orange?style=flat-square&logo=c%2B%2B)](https://github.com/LuckyPray/DexKit) | **Native 级动态分析库**<br>赋予模块强大的运行时字节码查找与抗混淆能力。 |
-| [![Compose](https://img.shields.io/badge/Jetpack_Compose-UI_Toolkit-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose) | **现代化 UI 工具包**<br>构建了模块美观、流畅且支持动态主题的用户界面。 |
-| [![LibXposed](https://img.shields.io/badge/LibXposed-Next_Gen_API-green?style=flat-square&logo=android)](https://github.com/libxposed/api) | **下一代 Hook 标准**<br>提供了跨框架兼容的底层 API 接口支持。 |
-| [![BeanShell](https://img.shields.io/badge/BeanShell-Script_Engine-brown?style=flat-square&logo=openjdk&logoColor=white)](https://github.com/beanshell/beanshell) | **轻量级 Java 脚本引擎**<br>提供了模块内置的动态脚本执行能力，支持用户通过编写脚本灵活扩展功能。 |
-| [![QAuxiliary](https://img.shields.io/badge/QAuxiliary-Architecture-8A2BE2?style=flat-square&logo=github)](https://github.com/cinit/QAuxiliary) | **架构兼容与注入实现**<br>借鉴了 Activity 代理注入及资源加载的成熟方案以及双框架支持，并参考了其多处核心 Hook 逻辑与代码实现。 |
-| [![TCQT](https://img.shields.io/badge/TCQT-Interfaces-F7DF1E?style=flat-square&logo=github&logoColor=black)](https://github.com/callng/TCQT) | **编译时接口与逻辑参考**<br>借鉴了关键业务类的编译时接口定义，同时参考了其部分 Hook 点位分析与功能实现写法。 |
+| [QFun](https://github.com/oneQAQone/QFun) | **原项目基础**<br>提供了完整的模块架构、Hook 系统与大量内置功能 |
+| [QuickJS-kt](https://github.com/dokar3/quickjs-kt) | **TypeScript/JS 引擎**<br>替换 BeanShell，提供现代化的 TS 插件运行时 |
+| [LSPosed](https://github.com/LSPosed/LSPosed) | **Xposed 框架** |
+| [DexKit](https://github.com/LuckyPray/DexKit) | **动态分析库** |
+| [Jetpack Compose](https://developer.android.com/jetpack/compose) | **UI 工具包** |
+| [LibXposed](https://github.com/libxposed/api) | **Hook 标准 API** |
 
 </div>
 
 <br/>
 
-# 免责声明
-
-1.  **仅供学习交流**: 本项目开发初衷仅为 Android 开发与逆向工程技术的学习、交流与研究。
-2.  **风险自担**: 使用本模块可能会违反 QQ/TIM 的用户协议，存在导致账号被冻结、封禁或功能受限的风险。**开发者不对因使用本模块造成的任何账号损失、数据丢失或其他后果负责。**
-3.  **非商业用途**: 本项目完全免费开源，禁止任何人将本项目用于商业用途或非法用途。
-
-**如果您下载、安装或使用了本模块，即代表您已阅读并同意上述免责声明。**
-
-<br/>
-
 <div align="center">
 
-*Made with ❤️ by [oneQAQone](https://github.com/oneQAQone)*
+*QAFUN · TypeScript Plugin Engine for QQ*
 
 </div>
