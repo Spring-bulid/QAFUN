@@ -200,7 +200,7 @@ class SettingViewModel : ViewModel() {
         if (updateLogState.logs.isNotEmpty()) return
         viewModelScope.launch(Dispatchers.IO) {
             updateLogState = UpdateLogState(isLoading = true)
-            val response = HttpUtils.getSuspend("${HttpUtils.HOST}/api/updatelog.php")
+            val response = HttpUtils.getSuspend("${HttpUtils.HOST}/updatelog.json")
             updateLogState = if (response.isNotEmpty()) {
                 try {
                     val json = JSONObject(response)

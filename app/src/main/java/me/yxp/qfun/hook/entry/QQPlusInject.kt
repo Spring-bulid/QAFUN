@@ -58,8 +58,8 @@ object QQPlusInject : BaseApiHookItem<Listener>() {
                         0,
                         MenuItem(
                             R.string.plugin_name,
-                            "JavaPlugin",
-                            "JavaPlugin",
+                            "QAFUN",
+                            "QAFUN",
                             R.drawable.ic_float_ball
                         )
                     )

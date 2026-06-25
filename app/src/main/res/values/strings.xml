@@ -1,5 +1,5 @@
 <resources>
-    <string name="plugin_name">JavaPlugin</string>
+    <string name="plugin_name">QAFUN</string>
     <string name="app_name">QAFUN</string>
     <string name="xposed_description">Adapted for QQ9.1.25+ and TIM4.0.95+</string>
     <string name="storage_clean">缓存清理</string>

@@ -13,7 +13,6 @@ import me.yxp.qfun.ui.components.dialogs.ConfirmDialog
 import me.yxp.qfun.ui.core.theme.QFunTheme
 import me.yxp.qfun.ui.pages.plugin.PluginScreen
 import me.yxp.qfun.ui.viewmodel.PluginViewModel
-import me.yxp.qfun.utils.net.HttpUtils
 
 @Suppress("DEPRECATION")
 class PluginActivity : BaseComposeActivity() {
@@ -109,7 +108,8 @@ class PluginActivity : BaseComposeActivity() {
     }
 
     private fun openDocs() = runCatching {
-        startActivity(Intent(Intent.ACTION_VIEW, "${HttpUtils.HOST}/doc.php".toUri()))
+        // 打开仓库 README 作为插件开发文档
+        startActivity(Intent(Intent.ACTION_VIEW, "https://github.com/Spring-bulid/QAFUN#typescript-插件开发".toUri()))
     }
 
     companion object {

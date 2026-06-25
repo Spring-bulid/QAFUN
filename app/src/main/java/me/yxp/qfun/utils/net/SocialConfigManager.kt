@@ -9,7 +9,7 @@ object SocialConfigManager {
     private var qqGroupUin: String = ""
     private var telegramChannel: String = ""
     
-    var githubRepo: String = "https://github.com/oneQAQone/QFun"
+    var githubRepo: String = "https://github.com/Spring-bulid/QAFUN"
         private set
 
     val qqGroupUrl: String
@@ -21,7 +21,7 @@ object SocialConfigManager {
     suspend fun fetchSocialConfig() {
         withContext(Dispatchers.IO) {
             try {
-                val response = HttpUtils.getSuspend("${HttpUtils.HOST}/api/social.php")
+                val response = HttpUtils.getSuspend("${HttpUtils.HOST}/social.json")
                 if (response.isNotEmpty()) {
                     val json = JSONObject(response)
                     if (json.has("QQGroup")) {

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "image_display_official",
+    "name": "图片外显",
+    "version": "1.0",
+    "author": "QAFUN",
+    "description": "将文字渲染为精美渐变图片发送，支持触发词自动转换与长按消息转换。6 套渐变预设（紫梦/海洋/日落/森林/暗夜/烈焰）。",
+    "filename": "image_display.zip",
+    "date": "2026-06-25",
+    "status": "approved",
+    "downloads": 0,
+    "download_url": "https://raw.githubusercontent.com/Spring-bulid/QAFUN/main/plugins/image_display.zip"
+  },
+  {
+    "id": "chat_stats_official",
+    "name": "群聊统计",
+    "version": "1.0",
+    "author": "QAFUN",
+    "description": "群聊消息统计仪表盘：每成员消息数、24 小时热力图、TOP5 排行榜。支持一键渲染统计图片发送到群聊。",
+    "filename": "chat_stats.zip",
+    "date": "2026-06-25",
+    "status": "approved",
+    "downloads": 0,
+    "download_url": "https://raw.githubusercontent.com/Spring-bulid/QAFUN/main/plugins/chat_stats.zip"
+  }
+]

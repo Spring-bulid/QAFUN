@@ -36,5 +36,6 @@ data class ScriptInfo(
 
 data class UploadResult(
     val id: String,
-    val status: String
+    val status: String,
+    val issueUrl: String = ""
 )

@@ -1,0 +1,9 @@
+{
+  "2.6": "重命名 JavaPlugin 为 QAFUN；插件服务器迁移到 GitHub（列表/上传/更新检查均走 GitHub raw + Issue）",
+  "2.5": "壁纸降特征（hook 范围缩到主界面、tag 无特征化、不破坏 QQ 背景）；防检测安全子集（包名列表过滤 + Debug）",
+  "2.4": "紧急修复 QQ 崩溃：移除 v2.3 过激的 File/Runtime/SystemProperties 全局 hook，仅保留安全的包名列表过滤",
+  "2.3": "新增自定义桌面壁纸 + 防检测（已废弃，过于激进导致 QQ 崩溃）",
+  "2.2": "修复 TS 插件 log 未定义错误；新增 setTimeout/console polyfill",
+  "2.1": "TypeScript 插件引擎重写：QuickJS-kt 替换 BeanShell，自研 TsTranspiler",
+  "2.0": "QAFUN 首版：紫青主题 UI 大改 + 图片外显 + 群聊统计"
+}

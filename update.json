@@ -1,0 +1,6 @@
+{
+  "latest_version": "2.6",
+  "release_date": "2026-06-25",
+  "release_notes": "重命名 JavaPlugin 为 QAFUN；插件服务器迁移到 GitHub（列表/上传/更新检查均走 GitHub raw + Issue）",
+  "download_url": "https://github.com/Spring-bulid/QAFUN/releases/latest"
+}

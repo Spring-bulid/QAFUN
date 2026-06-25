@@ -94,7 +94,7 @@ object QQSettingInject : BaseApiHookItem<Listener>(), DexKitTask {
                     itemClass,
                     context,
                     MODULE_ORDER,
-                    "JavaPlugin",
+                    "QAFUN",
                     R.drawable.ic_float_ball
                 )
                 setOnClickListener.invoke(

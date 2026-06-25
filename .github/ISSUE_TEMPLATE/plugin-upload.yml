@@ -1,0 +1,40 @@
+---
+name: 插件上传
+about: 上传你编写的 QAFUN TypeScript 插件到官方插件市场
+title: "插件上传: <插件名 v版本号>"
+labels: plugin-upload
+---
+
+## 插件信息
+
+- **插件名称**: 
+- **版本**: 
+- **作者**: 
+- **QQ 号**: （可选，便于联系）
+
+## 插件描述
+
+<!-- 简要描述插件功能 -->
+
+## 使用说明
+
+<!-- 如何使用，触发条件等 -->
+
+---
+
+## 上传方式
+
+1. 将你的插件目录（包含 `main.ts`、`info.prop`、`desc.txt`）打包为 zip
+2. 将 zip 文件作为附件拖拽到本 Issue（GitHub 支持 Issue 附件）
+3. 提交 Issue
+
+仓库所有者审核后，会将插件合并到 `plugins/` 目录并更新 `plugins/list.json`，届时用户可在 QAFUN 插件市场直接下载安装。
+
+### 插件目录结构示例
+
+```
+my_plugin/
+├── main.ts      # TypeScript 插件主文件
+├── info.prop    # 插件信息（name, author, version, desc）
+└── desc.txt     # 简短描述
+```

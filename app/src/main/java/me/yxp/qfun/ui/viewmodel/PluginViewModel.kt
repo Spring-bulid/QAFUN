@@ -262,12 +262,12 @@ class PluginViewModel : ViewModel() {
     private fun uploadPlugin(id: String) {
         val plugin = PluginManager.plugins.find { it.id == id } ?: return
         val scriptZip = File(QQCurrentEnv.currentDir + "cache", "${plugin.name}.zip")
-        
+
         if (!FileUtils.zip(File(plugin.dirPath), scriptZip)) {
             Toasts.qqToast(1, "打包失败")
             return
         }
-        
+
         viewModelScope.launch(Dispatchers.IO) {
             val result = ScriptService.uploadScript(
                 plugin.id,
@@ -279,7 +279,19 @@ class PluginViewModel : ViewModel() {
             )
             FileUtils.delete(scriptZip)
             result.fold(
-                onSuccess = { Toasts.qqToast(2, "上传成功: ${it.status}") },
+                onSuccess = { res ->
+                    // 上传改为打开 GitHub Issue 页面，让用户在 Issue 中附加 zip
+                    runCatching {
+                        val intent = android.content.Intent(
+                            android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse(res.issueUrl)
+                        ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        QQCurrentEnv.activity?.startActivity(intent)
+                            ?: Toasts.qqToast(2, "请通过浏览器访问: ${res.issueUrl}")
+                    }.onFailure {
+                        Toasts.qqToast(2, "请通过浏览器访问 Issue 页面上传插件")
+                    }
+                },
                 onFailure = { Toasts.qqToast(1, it.message ?: "上传失败") }
             )
         }

@@ -12,11 +12,25 @@ import java.io.File
 
 object ScriptService {
 
-    private const val API_URL = "${HttpUtils.HOST}/api/store.php"
+    /**
+     * 插件市场列表 —— 托管在 GitHub 仓库（Spring-bulid/QAFUN）的静态 JSON。
+     * 仓库所有者维护此文件，用户拉取即为已审核列表。
+     * 修改此文件即更新市场列表，无需服务器。
+     */
+    private const val PLUGIN_LIST_URL =
+        "https://raw.githubusercontent.com/Spring-bulid/QAFUN/main/plugins/list.json"
+
+    /**
+     * 用户上传入口 —— GitHub Issue。
+     * 因 GitHub 不支持 multipart 直传仓库，改为引导用户通过 Issue 上传插件 zip。
+     * Issue 提交后由仓库所有者审核，合并到 plugins/ 目录并更新 list.json。
+     */
+    private const val UPLOAD_ISSUE_URL =
+        "https://github.com/Spring-bulid/QAFUN/issues/new?labels=plugin-upload&title=%E6%8F%92%E4%BB%B6%E4%B8%8A%E4%BC%A0%3A+"
 
     suspend fun fetchScriptList(): Result<List<ScriptInfo>> = withContext(Dispatchers.IO) {
         runCatching {
-            val response = HttpUtils.getSuspend("$API_URL?action=get_uploads")
+            val response = HttpUtils.getSuspend(PLUGIN_LIST_URL)
 
             if (response.isEmpty()) {
                 return@runCatching Result.failure<List<ScriptInfo>>(
@@ -30,9 +44,8 @@ object ScriptService {
             for (i in jsonArr.length() - 1 downTo 0) {
                 val item = jsonArr.getJSONObject(i)
                 val info = ScriptInfo.parse(item)
-                if (info.status == "approved") {
-                    list.add(info)
-                }
+                // GitHub 静态 JSON 均为仓库所有者审核后录入，无需 status 过滤
+                list.add(info)
             }
 
             if (list.isEmpty()) {
@@ -81,6 +94,16 @@ object ScriptService {
         }
     }
 
+    /**
+     * 上传插件 —— 引导用户到 GitHub Issue 页面提交。
+     *
+     * 因 GitHub 仓库不支持 multipart 直传文件到仓库内容，
+     * 改为打开浏览器到仓库的 Issue 创建页（带预填标题），
+     * 用户在 Issue 描述中附上插件信息，并将 zip 作为附件上传到 Issue。
+     * 仓库所有者审核后，将插件合并到 plugins/ 目录并更新 list.json。
+     *
+     * 这样新插件会显示为「由 Spring-bulid/QAFUN 仓库审核发布」。
+     */
     suspend fun uploadScript(
         id: String,
         author: String,
@@ -93,32 +116,18 @@ object ScriptService {
             return@withContext Result.failure(ScriptException("无效的脚本文件"))
         }
 
-        val params = mapOf(
-            "id" to id,
-            "qq" to QQCurrentEnv.currentUin,
-            "version" to version,
-            "name" to name,
-            "description" to desc,
-            "author" to author
+        // 不再向服务器 POST 文件，而是返回 Issue 链接，由调用方打开浏览器
+        val issueTitle = "$name v$version"
+        val encodedTitle = java.net.URLEncoder.encode(issueTitle, "UTF-8")
+        val issueUrl = "$UPLOAD_ISSUE_URL$encodedTitle"
+
+        Result.success(
+            UploadResult(
+                id = id,
+                status = "请通过 GitHub Issue 上传: $issueUrl",
+                issueUrl = issueUrl
+            )
         )
-
-        try {
-            val response = HttpUtils.postMultipartSuspend(API_URL, params, "file", zipFile)
-            val json = JSONObject(response)
-
-            if (json.optBoolean("success")) {
-                val result = UploadResult(
-                    id = json.optString("id") ?: "",
-                    status = json.optString("message")
-                )
-                Result.success(result)
-            } else {
-                val msg = json.optString("message", "上传失败")
-                Result.failure(ScriptException(msg))
-            }
-        } catch (e: Exception) {
-            Result.failure(ScriptException("响应解析错误: ${e.message}"))
-        }
     }
 }
 

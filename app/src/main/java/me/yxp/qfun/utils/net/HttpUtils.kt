@@ -12,7 +12,12 @@ import java.net.URLEncoder
 
 object HttpUtils {
 
-    const val HOST = "http://127.0.0.1"
+    /**
+     * 基础域名 —— 指向 QAFUN 的 GitHub 仓库 raw 内容。
+     * 各端点（update/social/updatelog/doc）改为读取仓库内静态 JSON/Markdown。
+     * 由仓库所有者维护，无需后端服务器。
+     */
+    const val HOST = "https://raw.githubusercontent.com/Spring-bulid/QAFUN/main"
     private const val CONNECT_TIMEOUT = 10000
     private const val READ_TIMEOUT = 15000
     private const val USER_AGENT =
