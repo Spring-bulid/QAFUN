@@ -44,7 +44,13 @@ object CustomWallpaper : BaseClickableHookItem<WallpaperConfig>(WallpaperConfig.
 
     override val defaultConfig: WallpaperConfig = WallpaperConfig()
 
-    private const val TAG_WALLPAPER = "qfun_wallpaper_layer"
+    private const val TAG_WALLPAPER = "overlay_bg"
+
+    /** 仅对这些 Activity 注入壁纸（QQ 主界面 shell），缩小 hook 影响面降低风控检测 */
+    private val targetActivities = setOf(
+        "com.tencent.mobileqq.activity.QPublicFragmentActivity",
+        "com.tencent.mobileqq.activity.MainActivity"
+    )
 
     @Volatile private var cacheKey: String = ""
     @Volatile private var cachedBmpRef: SoftReference<Bitmap>? = null
@@ -58,10 +64,10 @@ object CustomWallpaper : BaseClickableHookItem<WallpaperConfig>(WallpaperConfig.
             activityOnPostResume.hookAfter(this) { param ->
                 val activity = param.thisObject as? Activity ?: return@hookAfter
                 val className = activity.javaClass.name
+                // 跳过模块自身
                 if (className.startsWith("me.yxp.qfun")) return@hookAfter
-                if (!className.contains("tencent", ignoreCase = true) &&
-                    !className.contains("qq", ignoreCase = true)
-                ) return@hookAfter
+                // 仅对 QQ 主界面 shell 生效（不再 hook 所有 Activity）
+                if (className !in targetActivities) return@hookAfter
                 applyWallpaper(activity)
             }
         }.onFailure { LogUtils.e(TAG, RuntimeException("CustomWallpaper hook install failed", it)) }
@@ -70,22 +76,21 @@ object CustomWallpaper : BaseClickableHookItem<WallpaperConfig>(WallpaperConfig.
     private fun applyWallpaper(activity: Activity) {
         val cfg = config
         if (cfg.imagePath.isEmpty() || !File(cfg.imagePath).exists()) return
-        val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
-
-        // 等待布局完成，Fragment 根 View 此时已就位
-        content.post {
-            runCatching { installWallpaperLayer(activity, content, cfg) }
+        // 壁纸层加到 DecorView，位于 content 之下，不破坏 QQ 原有 View 结构
+        val decor = activity.window.decorView as? ViewGroup ?: return
+        decor.post {
+            runCatching { installWallpaperLayer(activity, decor, cfg) }
                 .onFailure { LogUtils.e(TAG, it) }
         }
     }
 
     private fun installWallpaperLayer(
         activity: Activity,
-        content: ViewGroup,
+        decor: ViewGroup,
         cfg: WallpaperConfig
     ) {
-        // 1. 先确保壁纸 ImageView 已插入到 content 的 index 0
-        var wallpaperView: ImageView? = content.findViewWithTag(TAG_WALLPAPER)
+        // 1. 复用已存在的壁纸层，避免重复 View 操作
+        var wallpaperView: ImageView? = decor.findViewWithTag(TAG_WALLPAPER) as? ImageView
         if (wallpaperView == null) {
             wallpaperView = ImageView(activity).apply {
                 tag = TAG_WALLPAPER
@@ -94,33 +99,26 @@ object CustomWallpaper : BaseClickableHookItem<WallpaperConfig>(WallpaperConfig.
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
                 scaleType = when (cfg.scaleType) {
-                    1    -> ImageView.ScaleType.FIT_CENTER   // 适应
-                    2    -> ImageView.ScaleType.FIT_XY       // 拉伸
-                    else -> ImageView.ScaleType.CENTER_CROP  // 裁剪填充（默认）
+                    1    -> ImageView.ScaleType.FIT_CENTER
+                    2    -> ImageView.ScaleType.FIT_XY
+                    else -> ImageView.ScaleType.CENTER_CROP
                 }
                 setImageDrawable(ColorDrawable(Color.TRANSPARENT))
             }
-            content.addView(wallpaperView, 0)
+            // 插到 index 0，位于 content 之下
+            decor.addView(wallpaperView, 0)
         } else {
-            wallpaperView.scaleType = when (cfg.scaleType) {
+            // 仅在 scaleType 变化时更新
+            val newType = when (cfg.scaleType) {
                 1    -> ImageView.ScaleType.FIT_CENTER
                 2    -> ImageView.ScaleType.FIT_XY
                 else -> ImageView.ScaleType.CENTER_CROP
             }
+            if (wallpaperView.scaleType != newType) wallpaperView.scaleType = newType
         }
+        // 不再清除 QQ 原有背景，避免破坏 UI 完整性触发风控
 
-        // 2. 清除上层不透明背景，让壁纸透出
-        activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        content.background = null
-        // content.getChildAt(1) 是原 Fragment 根 View（index 0 已是壁纸层）
-        if (content.childCount > 1) {
-            val fragRoot = content.getChildAt(1)
-            if (fragRoot.background is ColorDrawable) {
-                fragRoot.background = null
-            }
-        }
-
-        // 3. 加载并设置壁纸 Bitmap
+        // 2. 加载并设置壁纸 Bitmap
         val key = "${cfg.imagePath}|${cfg.blurRadius}|${cfg.dimAmount}"
         if (key == cacheKey) {
             cachedBmpRef?.get()?.let { bmp ->
@@ -129,9 +127,8 @@ object CustomWallpaper : BaseClickableHookItem<WallpaperConfig>(WallpaperConfig.
                 return
             }
         }
-        // 占位透明，后台解码后回主线程设置
         wallpaperView.setImageDrawable(ColorDrawable(Color.TRANSPARENT))
-        thread(name = "qfun-wallpaper-decode") {
+        thread(name = "bg-decode") {
             val bmp = runCatching { obtainBitmap(cfg) }.getOrNull() ?: return@thread
             activity.runOnUiThread {
                 runCatching {
