@@ -10,7 +10,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-val keystorePropertiesFile = rootProject.file("local.properties")
+val keystorePropertiesFile = rootProject.file("app/keystore.properties")
 val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
@@ -24,8 +24,8 @@ extensions.configure<ApplicationExtension> {
         applicationId = "me.yxp.qfun"
         minSdk = 26
         targetSdk = 37
-        versionCode = 32
-        versionName = "2.8"
+        versionCode = 33
+        versionName = "2.9"
 
         ndk {
             abiFilters.add("arm64-v8a")

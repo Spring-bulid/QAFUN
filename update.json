@@ -1,6 +1,6 @@
 {
-  "latest_version": "2.8",
-  "release_date": "2026-06-25",
-  "release_notes": "新增「无限制拍一拍」：屏蔽 QQ 服务端返回的「休息一下/操作频繁」等限流提示；拍一拍连拍上限从 200 提升到 9999",
+  "latest_version": "2.9",
+  "release_date": "2026-06-26",
+  "release_notes": "新增「QQ秀截取」：点击聊天消息头像即可查看对方QQ秀，支持预览全身/半身、保存到相册、复制链接、浏览器打开",
   "download_url": "https://github.com/Spring-bulid/QAFUN/releases/latest"
 }
