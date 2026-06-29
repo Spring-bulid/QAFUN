@@ -67,17 +67,17 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * QQ秀截取：点击聊天消息头像 → 弹出对方QQ秀面板，可预览/保存/打开。
+ * QQ秀截取：点击聊天消息头像 → 弹出对方QQ秀/头像面板，可预览/保存/打开。
  *
  * 复用 SimpleTroopManagement 的头像点击 DexKit 查询（同一个 OnClickListener），
  * 但对所有聊天场景生效。与简洁群管互补：
  *  - 群聊 + 群主/管理员 + 简洁群管已开 → 走群管面板（invokeOriginal 让出）
- *  - 其它场景 → 拦截点击，弹QQ秀面板
+ *  - 其它场景 → 拦截点击，弹面板
  *
- * QQ秀图片 URL（经典QQ秀，基于 uin 固定格式）：
- *  - 全身：https://qqshow-user.tencent.com/{uin}/10/00/
- *  - 半身：https://qqshow-user.tencent.com/{uin}/11/00/
- * 同时尝试从 MsgRecord.avatarMeta 解析超级QQ秀信息作为补充。
+ * 图片 URL（经典QQ秀端点已下线，降级为 QQ头像高清接口）：
+ *  - 高清：https://q.qlogo.cn/headimg_dl?dst_uin={uin}&spec=640&img_type=jpg
+ *  - 标准：https://q.qlogo.cn/headimg_dl?dst_uin={uin}&spec=140&img_type=jpg
+ *  - 兜底：https://q1.qlogo.cn/g?b=qq&nk={uin}&s=640
  */
 @HookItemAnnotation(
     "QQ秀截取",
@@ -166,29 +166,47 @@ object StealQQShow : BaseSwitchHookItem(), DexKitTask {
     )
 }
 
-// ==================== QQ秀 URL 与图片下载 ====================
+// ==================== QQ头像 URL 与图片下载 ====================
+// 注意：经典QQ秀端点（qqshow-user.tencent.com / qqshow-item.qq.com 等）已全部下线，
+// 这里降级为 QQ头像高清接口（已验证可用）。
+//   headimg_dl: 高清头像，spec 控制尺寸（640/140/100），img_type=jpg
+//   g?b=qq&nk={uin}&s={size}: 备用头像接口，s 控制 size（640/140/100）
 
-/** 经典QQ秀全身图URL */
+/** QQ高清头像（640x640） */
 private fun classicQQShowUrl(uin: String): String =
-    "https://qqshow-user.tencent.com/$uin/10/00/"
+    "https://q.qlogo.cn/headimg_dl?dst_uin=$uin&spec=640&img_type=jpg"
 
-/** 经典QQ秀半身图URL */
+/** QQ标准头像（140x140） */
 private fun classicQQShowHalfUrl(uin: String): String =
-    "https://qqshow-user.tencent.com/$uin/11/00/"
+    "https://q.qlogo.cn/headimg_dl?dst_uin=$uin&spec=140&img_type=jpg"
+
+/** QQ备用头像（g 接口，s=640），主接口失败时兜底 */
+private fun fallbackAvatarUrl(uin: String): String =
+    "https://q1.qlogo.cn/g?b=qq&nk=$uin&s=640"
 
 /** 下载图片为 Bitmap（挂起函数） */
 private suspend fun downloadBitmap(urlStr: String): Bitmap? = withContext(Dispatchers.IO) {
     runCatching {
         val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 10000
-            readTimeout = 10000
+            connectTimeout = 8000
+            readTimeout = 8000
             requestMethod = "GET"
+            instanceFollowRedirects = true
             setRequestProperty("User-Agent", "Mozilla/5.0")
         }
         conn.connect()
         if (conn.responseCode != 200) return@runCatching null
         conn.inputStream.use { BitmapFactory.decodeStream(it) }
     }.getOrNull()
+}
+
+/** 主 URL 失败时尝试兜底 URL */
+private suspend fun downloadBitmapWithFallback(
+    primaryUrl: String,
+    fallbackUrl: String
+): Bitmap? {
+    downloadBitmap(primaryUrl)?.let { return it }
+    return downloadBitmap(fallbackUrl)
 }
 
 /** 保存 Bitmap 到相册，返回文件路径 */
@@ -222,15 +240,15 @@ private fun QQShowContent(
     var error by remember { mutableStateOf<String?>(null) }
     var currentUrl by remember { mutableStateOf(classicQQShowUrl(targetUin)) }
 
-    // 加载QQ秀图片
+    // 加载QQ头像图片（主接口失败自动兜底到备用接口）
     LaunchedEffect(currentUrl) {
         loading = true
         error = null
-        val bmp = downloadBitmap(currentUrl)
+        val bmp = downloadBitmapWithFallback(currentUrl, fallbackAvatarUrl(targetUin))
         if (bmp != null) {
             bitmap = bmp
         } else {
-            error = "加载失败"
+            error = "加载失败，请检查网络或QQ号"
         }
         loading = false
     }
@@ -303,13 +321,13 @@ private fun QQShowContent(
                 onClick = { currentUrl = classicQQShowUrl(targetUin) },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp)
-            ) { Text("全身", fontSize = 12.sp) }
+            ) { Text("高清", fontSize = 12.sp) }
 
             OutlinedButton(
                 onClick = { currentUrl = classicQQShowHalfUrl(targetUin) },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp)
-            ) { Text("半身", fontSize = 12.sp) }
+            ) { Text("标准", fontSize = 12.sp) }
         }
 
         // 操作按钮

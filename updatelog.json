@@ -1,4 +1,6 @@
 {
+  "2.10": "新增「文件转直链」：长按文件消息即可弹出面板，展示文件名/大小/MD5/SHA/UUID/本地路径；群聊场景自动反射 IKernelRichMediaService.getGroupFileInfo 异步获取下载直链（5秒超时，回调对象结构 dump 到日志）；支持复制直链/UUID/路径、浏览器打开。私聊文件无 kernel 直链接口，需手动下载后从本地路径获取",
+  "2.9.1": "修复「QQ秀截取」图片加载不出来：经典 QQ秀端点（qqshow-user.tencent.com、qqshow-item.qq.com 等）已全部下线超时无响应，切换为 QQ头像高清接口 headimg_dl（spec=640/140，已验证可用）+ q1.qlogo.cn/g 兜底；主接口失败自动 fallback；UI 按钮「全身/半身」改为「高清/标准」",
   "2.9": "新增「QQ秀截取」：点击聊天消息头像弹出QQ秀面板，支持预览全身/半身、保存图片到相册、复制链接、浏览器打开。与简洁群管互补（群管场景走群管面板，其它场景走QQ秀面板）",
   "2.8": "新增「无限制拍一拍」：hook QQToastUtil.showQQToastInUiThread，命中「休息一下/操作频繁/稍后再试/拍太多了」等关键词时跳过不显示；拍一拍连拍上限从 200 提升到 9999",
   "2.7.4": "修复私聊场景逆向查号取不到 QQ 号：私聊里 peerUin 就是对方 QQ 号（可靠值），senderUin 为 0 时直接用 peerUin，不再走 uid 反查（关系链缓存对非好友查不到）",

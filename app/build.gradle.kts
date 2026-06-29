@@ -24,8 +24,8 @@ extensions.configure<ApplicationExtension> {
         applicationId = "me.yxp.qfun"
         minSdk = 26
         targetSdk = 37
-        versionCode = 33
-        versionName = "2.9"
+        versionCode = 35
+        versionName = "2.10"
 
         ndk {
             abiFilters.add("arm64-v8a")
@@ -52,6 +52,8 @@ extensions.configure<ApplicationExtension> {
 
     buildTypes {
         release {
+            // 注：R8 混淆需较大内存（2.5G+），在内存受限的 CI/cgroup 环境
+            // 可能 OOM；此时临时改为 false 可跳过 R8 打包验证功能。
             isMinifyEnabled = true
             isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")

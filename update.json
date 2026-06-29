@@ -1,6 +1,6 @@
 {
-  "latest_version": "2.9",
-  "release_date": "2026-06-26",
-  "release_notes": "新增「QQ秀截取」：点击聊天消息头像即可查看对方QQ秀，支持预览全身/半身、保存到相册、复制链接、浏览器打开",
+  "latest_version": "2.10",
+  "release_date": "2026-06-29",
+  "release_notes": "新增「文件转直链」：长按文件消息即可查看文件名/大小/MD5/SHA/UUID/本地路径，群聊场景自动反射 IKernelRichMediaService.getGroupFileInfo 尝试获取下载直链，支持复制直链/UUID/路径和浏览器打开",
   "download_url": "https://github.com/Spring-bulid/QAFUN/releases/latest"
 }
